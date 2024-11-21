@@ -1,9 +1,14 @@
 // entry point, for compiling main.go is needed
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/rkkim04/learngo/banking"
+)
 
 func main(){
-	fmt.Println("Hello, World")
+	account := banking.Account{Owner:"nicolas", Balance:1000}
+	fmt.Println(account)
 }
 
