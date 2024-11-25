@@ -2,26 +2,54 @@
 package main
 
 import (
+	"errors"
 	"fmt"
-	"time"
+	"net/http"
 )
+
+type requestResult struct{
+	url string
+	status string
+}
+
+var errRequestFailed = errors.New("Request failed")
 
 // where saving the results
 func main(){
-	c := make(chan string)
-	people := [5]string{"nico","flynn","dal","japanguy","jarry"}
-	// create goroutines
-	for _, person := range people {
-		go isSexy(person, c)
+	// not using but for waiting for the func
+	results := make(map[string]string)
+	c := make(chan requestResult)
+	urls := []string{
+		"https://www.airbnb.com/",
+		"https://www.google.com/",
+		"https://www.amazon.com/",
+		"https://www.reddit.com/",
+		"https://www.google.com/",
+		"https://soundcloud.com/",
+		"https://www.facebook.com/",
+		"https://www.instagram.com/",
+		"https://academy.nomadcoders.co/",
 	}
-	for i:=0;i<len(people);i++{
-		fmt.Println(<-c)
+	
+	for _, url := range urls {
+		go hitURL(url, c)
+	}
+
+	for i:=0;i<len(urls);i++{
+		result := <-c
+		results[result.url] = result.status
+	}
+
+	for url, status := range results{
+		fmt.Println(url, status)
 	}
 }
 
-func isSexy(person string, c chan string) {
-	// sleep 5 sec
-	time.Sleep(time.Second*5)
-	// send channel this message
-	c <- person + " is sexy"
+func hitURL(url string, c chan<- requestResult) {
+	resp, err := http.Get(url)
+	status := "OK"
+	if err != nil || resp.StatusCode >= 400 {
+		status = "FAILED"
+	}
+	c <- requestResult{url: url, status: status}
 }
