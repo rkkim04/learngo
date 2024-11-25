@@ -1,55 +1,49 @@
-// entry point, for compiling main.go is needed
 package main
 
 import (
-	"errors"
 	"fmt"
+	"log"
 	"net/http"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
-type requestResult struct{
-	url string
-	status string
+// https://kr.indeed.com/jobs?q=python&l=&from=searchOnHP&vjk=875d4550ab104a22
+
+var baseURL string = "https://tech.kakaobank.com/"
+
+func main() {
+	getPages()
 }
 
-var errRequestFailed = errors.New("Request failed")
+func getPages() int {
+	res, err := http.Get(baseURL)
+	checkErr(err)
+	checkCode(res)
 
-// where saving the results
-func main(){
-	// not using but for waiting for the func
-	results := make(map[string]string)
-	c := make(chan requestResult)
-	urls := []string{
-		"https://www.airbnb.com/",
-		"https://www.google.com/",
-		"https://www.amazon.com/",
-		"https://www.reddit.com/",
-		"https://www.google.com/",
-		"https://soundcloud.com/",
-		"https://www.facebook.com/",
-		"https://www.instagram.com/",
-		"https://academy.nomadcoders.co/",
-	}
-	
-	for _, url := range urls {
-		go hitURL(url, c)
-	}
+	// to prevent memory leak, close the connection
+	defer res.Body.Close()
 
-	for i:=0;i<len(urls);i++{
-		result := <-c
-		results[result.url] = result.status
-	}
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	checkErr(err)
 
-	for url, status := range results{
-		fmt.Println(url, status)
+	doc.Find(".pagination").Each(func(i int, s *goquery.Selection) {
+		fmt.Println(s.Find("a").Length())
+	}) 
+
+
+
+	return 0
+}
+
+func checkErr(err error) {
+	if err != nil {
+		log.Fatalln(err)
 	}
 }
 
-func hitURL(url string, c chan<- requestResult) {
-	resp, err := http.Get(url)
-	status := "OK"
-	if err != nil || resp.StatusCode >= 400 {
-		status = "FAILED"
+func checkCode(res *http.Response){
+	if res.StatusCode != 200 {
+		log.Fatalln("Request failed with Status:", res.StatusCode)
 	}
-	c <- requestResult{url: url, status: status}
 }
