@@ -13,10 +13,12 @@ import (
 var baseURL string = "https://tech.kakaobank.com/"
 
 func main() {
-	getPages()
+	totalPages := getPages()
+	fmt.Println(totalPages)
 }
 
 func getPages() int {
+	pages := 0
 	res, err := http.Get(baseURL)
 	checkErr(err)
 	checkCode(res)
@@ -28,12 +30,10 @@ func getPages() int {
 	checkErr(err)
 
 	doc.Find(".pagination").Each(func(i int, s *goquery.Selection) {
-		fmt.Println(s.Find("a").Length())
-	}) 
+		pages = s.Find("a").Length()
+	})
 
-
-
-	return 0
+	return pages
 }
 
 func checkErr(err error) {
@@ -42,7 +42,7 @@ func checkErr(err error) {
 	}
 }
 
-func checkCode(res *http.Response){
+func checkCode(res *http.Response) {
 	if res.StatusCode != 200 {
 		log.Fatalln("Request failed with Status:", res.StatusCode)
 	}
