@@ -1,56 +1,77 @@
-// entry point, for compiling main.go is needed
 package main
 
 import (
-	"errors"
 	"fmt"
+	"log"
 	"net/http"
+	"strconv"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
-var errRequestFailed = errors.New("requset failed")
+// https://kr.indeed.com/jobs?q=python&l=&from=searchOnHP&vjk=875d4550ab104a22
 
+// var baseURL string = "https://tech.kakaobank.com/"
+var baseURL string = "https://www.jobkorea.co.kr/Search/?stext=python&tabType=recruit"
 
-func main(){
-	var results = map[string]string{
-		
+func main() {
+	totalPages := getPages()
+
+	for i := 0; i < totalPages; i++ {
+		getPage(i)
 	}
 
+}
 
-	urls := []string{
-		"https://www.airbnb.com/",
-		"https://www.google.com/",
-		"https://www.amazon.com/",
-		"https://www.reddit.com/",
-		"https://www.google.com/",
-		"https://soundcloud.com/",
-		"https://www.facebook.com/",
-		"https://www.instagram.com/",
-		"https://academy.nomadcoders.co/",
-	}
+func getPage(page int) {
+	// pageURL := baseURL + "page/" + strconv.Itoa(page)
+	pageURL := baseURL + "&Page_No=" + strconv.Itoa(page)
+	fmt.Println("Requesting", pageURL)
+	res, err := http.Get(pageURL)
+	checkErr(err)
+	checkCode(res)
 
-	for _, url := range urls {
-		result := "OK"
-		err := hitURL(url)
-		if err != nil {
-			result = "FAILED"
-		}
-		results[url] = result
-	}
-	for url, result := range results{
-		fmt.Println(url, result)
+	// to prevent memory leak, close the connection
+	defer res.Body.Close()
+
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	checkErr(err)
+
+	searchCards := doc.Find("post")
+	searchCards.Each(func(i int, s *goquery.Selection) {
+		id, _ := s.Attr("data-listno")
+		fmt.Println(id)
+	})
+
+}
+
+func getPages() int {
+	pages := 0
+	res, err := http.Get(baseURL)
+	checkErr(err)
+	checkCode(res)
+
+	// to prevent memory leak, close the connection
+	defer res.Body.Close()
+
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	checkErr(err)
+
+	doc.Find(".pagination").Each(func(i int, s *goquery.Selection) {
+		pages = s.Find("a").Length()
+	})
+
+	return pages
+}
+
+func checkErr(err error) {
+	if err != nil {
+		log.Fatalln(err)
 	}
 }
 
-
-
-// hitURL test
-func hitURL(url string) error {
-	fmt.Println("checking:", url)
-	resp, err := http.Get(url)
-	if err != nil || resp.StatusCode >= 400 {
-		fmt.Println(err, resp.StatusCode)
-		return errRequestFailed
+func checkCode(res *http.Response) {
+	if res.StatusCode != 200 {
+		log.Fatalln("Request failed with Status:", res.StatusCode)
 	}
-	return nil
 }
-
